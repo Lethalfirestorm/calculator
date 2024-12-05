@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ken's Vacation Expense Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f9;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .expense-container {
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        label {
+            font-weight: bold;
+            color: #34495e;
+        }
+        select, input, textarea, button {
+            margin: 10px 0;
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #27ae60;
+            color: white;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2ecc71;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #2c3e50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #ecf0f1;
+        }
+        .category-section {
+            margin-top: 20px;
+        }
+        .category-totals-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .category-total {
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            flex: 1 1 calc(33.333% - 10px);
+            text-align: center;
+        }
+        .category-total:nth-child(1) { background-color: #ff7043; } /* Alcohol - Orange */
+        .category-total:nth-child(2) { background-color: #66bb6a; } /* Camping - Green */
+        .category-total:nth-child(3) { background-color: #29b6f6; } /* Clothing - Blue */
+        .category-total:nth-child(4) { background-color: #ab47bc; } /* Entertainment - Purple */
+        .category-total:nth-child(5) { background-color: #ffca28; } /* Gasoline - Yellow */
+        .category-total:nth-child(6) { background-color: #ef5350; } /* Groceries - Red */
+        .category-total:nth-child(7) { background-color: #26c6da; } /* Hotels - Cyan */
+        .category-total:nth-child(8) { background-color: #5c6bc0; } /* Miscellaneous - Indigo */
+        .category-total:nth-child(9) { background-color: #ffa726; } /* Restaurants - Orange Light */
+        .category-total:nth-child(10) { background-color: #8d6e63; } /* Beer - Brown */
+        .totals-container {
+            margin-top: 20px;
+        }
+        .grand-total {
+            font-weight: bold;
+            font-size: 1.4em;
+            color: #e74c3c;
+        }
+        #pieChart {
+            max-width: 600px;
+            margin: 30px auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Ken's Vacation Expense Tracker</h1>
+
+    <div class="expense-container">
+        <label for="date">Date: </label>
+        <input type="date" id="date" required>
+
+        <label for="category">Category: </label>
+        <select id="category" required>
+            <option value="">Select Category</option>
+            <option value="Alcohol">Alcohol</option>
+            <option value="Camping">Camping</option>
+            <option value="Clothing">Clothing</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Gasoline">Gasoline</option>
+            <option value="Groceries">Groceries</option>
+            <option value="Hotels">Hotels</option>
+            <option value="Miscellaneous">Miscellaneous</option>
+            <option value="Restaurants">Restaurants</option>
+            <option value="Beer">Beer</option>
+        </select>
+
+        <label for="amount">Amount ($): </label>
+        <input type="number" id="amount" step="0.01" required>
+
+        <label for="description">Description: </label>
+        <textarea id="description" rows="3" cols="30"></textarea>
+
+        <label for="odometer">Odometer (km): </label>
+        <input type="number" id="odometer" step="0.1">
+
+        <label for="gallons">Fuel (Gallons): </label>
+        <input type="number" id="gallons" step="0.1" onchange="convertToLiters()">
+
+        <label for="liters">Fuel (Liters): </label>
+        <input type="number" id="liters" step="0.1" onchange="convertToGallons()">
+
+        <button onclick="addExpense()">Add Expense</button>
+    </div>
+
+    <table id="expenseTable">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Description</th>
+                <th>Odometer (km)</th>
+                <th>Fuel (Gallons)</th>
+                <th>Fuel Efficiency (km/Gallon)</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Expenses will be listed here -->
+        </tbody>
+    </table>
+
+    <div class="totals-container">
+        <p><strong>Category Totals:</strong></p>
+        <div id="categoryTotals" class="category-totals-container"></div>
+
+        <p><strong>Grand Total: $<span id="totalAmount">0.00</span></strong></p>
+        <p><strong>Total Distance Traveled: <span id="totalDistanceKm">0</span> km / <span id="totalDistanceMiles">0</span> miles</strong></p>
+        <p><strong>Total Fuel Used: <span id="totalFuelGallons">0</span> gallons / <span id="totalFuelLiters">0</span> liters</strong></p>
+        <p><strong>Average Fuel Efficiency: <span id="avgMPG">0.00</span> miles/gallon / <span id="avgKPL">0.00</span> km/liter</strong></p>
+    </div>
+
+    <div id="pieChart">
+        <canvas id="chart"></canvas>
+    </div>
+
+    <script>
+        const categoryColors = [
+            "#ff7043", "#66bb6a", "#29b6f6", "#ab47bc", 
+            "#ffca28", "#ef5350", "#26c6da", "#5c6bc0", 
+            "#ffa726", "#8d6e63"
+        ];
+
+        const ctx = document.getElementById('chart').getContext('2d');
+        let chart = null;
+
+        window.onload = function() {
+            loadExpenses();
+        };
+
+        function saveExpenses(expenses) {
+            localStorage.setItem("vacationExpenses", JSON.stringify(expenses));
+        }
+
+        function loadExpenses() {
+            const savedExpenses = JSON.parse(localStorage.getItem("vacationExpenses")) || [];
+            updateExpenseTable(savedExpenses);
+            updateCategoryTotals(savedExpenses);
+            updateTotal(savedExpenses);
+            updatePieChart(savedExpenses);
+        }
+
+        function updateExpenseTable(expenses) {
+            const tbody = document.getElementById("expenseTable").getElementsByTagName('tbody')[0];
+            tbody.innerHTML = "";
+            expenses.forEach((expense, index) => {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = expense.date;
+                row.insertCell(1).textContent = expense.category;
+                row.insertCell(2).textContent = `$${expense.amount.toFixed(2)}`;
+                row.insertCell(3).textContent = expense.description;
+                row.insertCell(4).textContent = expense.odometer;
+                row.insertCell(5).textContent = expense.fuel ? expense.fuel.toFixed(2) : '0.00';
+                row.insertCell(6).textContent = expense.fuelEfficiency ? expense.fuelEfficiency.toFixed(2) : '0.00';
+                const deleteBtn = document.createElement("button");
+                deleteBtn.textContent = "Delete";
+                deleteBtn.style.backgroundColor = "#e74c3c";
+                deleteBtn.onclick = () => deleteExpense(index);
+                row.insertCell(7).appendChild(deleteBtn);
+            });
+        }
+
+        function deleteExpense(index) {
+            const expenses = JSON.parse(localStorage.getItem("vacationExpenses"));
+            expenses.splice(index, 1);
+            saveExpenses(expenses);
+            updateExpenseTable(expenses);
+            updateCategoryTotals(expenses);
+            updateTotal(expenses);
+            updatePieChart(expenses);
+        }
+
+        function convertToLiters() {
+            const gallons = parseFloat(document.getElementById("gallons").value) || 0;
+            document.getElementById("liters").value = (gallons * 3.78541).toFixed(2);
+        }
+
+        function convertToGallons() {
+            const liters = parseFloat(document.getElementById("liters").value) || 0;
+            document.getElementById("gallons").value = (liters / 3.78541).toFixed(2);
+        }
+
+        function updateCategoryTotals(expenses) {
+            const categoryTotals = {};
+            expenses.forEach(expense => {
+                categoryTotals[expense.category] = categoryTotals[expense.category] || 0;
+                categoryTotals[expense.category] += expense.amount;
+            });
+            const categoryTotalsContainer = document.getElementById("categoryTotals");
+            categoryTotalsContainer.innerHTML = "";
+            for (let category in categoryTotals) {
+                const total = categoryTotals[category];
+                const categoryDiv = document.createElement("div");
+                categoryDiv.className = "category-total";
+                categoryDiv.style.backgroundColor = categoryColors[Object.keys(categoryTotals).indexOf(category)];
+                categoryDiv.textContent = `${category}: $${total.toFixed(2)}`;
+                categoryTotalsContainer.appendChild(categoryDiv);
+            }
+        }
+
+        function updateTotal(expenses) {
+            let totalAmount = 0;
+            let totalDistanceKm = 0;
+            let totalFuelGallons = 0;
+            let totalFuelLiters = 0;
+
+            expenses.forEach(expense => {
+                totalAmount += expense.amount;
+                if (expense.odometer) totalDistanceKm += parseFloat(expense.odometer);
+                if (expense.fuel) totalFuelGallons += parseFloat(expense.fuel);
+            });
+
+            totalFuelLiters = totalFuelGallons * 3.78541; // Convert gallons to liters
+            const totalDistanceMiles = totalDistanceKm * 0.621371; // Convert km to miles
+            const avgMPG = totalDistanceMiles / totalFuelGallons || 0;
+            const avgKPL = totalDistanceKm / totalFuelLiters || 0;
+
+            document.getElementById("totalAmount").textContent = totalAmount.toFixed(2);
+            document.getElementById("totalDistanceKm").textContent = totalDistanceKm.toFixed(2);
+            document.getElementById("totalDistanceMiles").textContent = totalDistanceMiles.toFixed(2);
+            document.getElementById("totalFuelGallons").textContent = totalFuelGallons.toFixed(2);
+            document.getElementById("totalFuelLiters").textContent = totalFuelLiters.toFixed(2);
+            document.getElementById("avgMPG").textContent = avgMPG.toFixed(2);
+            document.getElementById("avgKPL").textContent = avgKPL.toFixed(2);
+        }
+
+        function updatePieChart(expenses) {
+            const categoryTotals = {};
+            expenses.forEach(expense => {
+                categoryTotals[expense.category] = categoryTotals[expense.category] || 0;
+                categoryTotals[expense.category] += expense.amount;
+            });
+            const labels = Object.keys(categoryTotals);
+            const data = labels.map(label => categoryTotals[label]);
+
+            if (chart) {
+                chart.destroy();
+            }
+            chart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: categoryColors.slice(0, labels.length)
+                    }]
+                }
+            });
+        }
+
+        function addExpense() {
+            const date = document.getElementById("date").value;
+            const category = document.getElementById("category").value;
+            const amount = parseFloat(document.getElementById("amount").value);
+            const description = document.getElementById("description").value;
+            const odometer = parseFloat(document.getElementById("odometer").value) || 0;
+            const fuelGallons = parseFloat(document.getElementById("gallons").value) || 0;
+            const fuelLiters = parseFloat(document.getElementById("liters").value) || 0;
+
+            if (!date || !category || isNaN(amount)) {
+                alert("Please fill in all required fields.");
+                return;
+            }
+
+            const fuel = fuelGallons || (fuelLiters / 3.78541);
+            const fuelEfficiency = odometer && fuel ? odometer / fuel : 0;
+
+            const expense = {
+                date,
+                category,
+                amount,
+                description,
+                odometer,
+                fuel: fuelGallons || fuelLiters,
+                fuelEfficiency
+            };
+
+            const expenses = JSON.parse(localStorage.getItem("vacationExpenses")) || [];
+            expenses.push(expense);
+            saveExpenses(expenses);
+            updateExpenseTable(expenses);
+            updateCategoryTotals(expenses);
+            updateTotal(expenses);
+            updatePieChart(expenses);
+        }
+    </script>
+</body>
+</html>
